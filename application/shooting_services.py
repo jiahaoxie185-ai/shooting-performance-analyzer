@@ -3,8 +3,7 @@ from typing import Optional
 from uuid import UUID, uuid4
 
 from domain.shooting.entities import ShootingSession,ShootingZone,ShotAttempt
-from domain.users.repositories import UserRepository
-from domain.shooting.repositories import ShootingRepository
+from application.unit_of_work import UnitOfWork
 from domain.shooting.rules import calculate_shooting_summary, calculate_zone_statistics
 
 
@@ -13,11 +12,9 @@ class ShootingService:
     # 保存外部传入的 Repository，实现类在组装时确定
     def __init__(
         self,
-        user_repository: UserRepository,
-        shooting_repository: ShootingRepository
+        uow: UnitOfWork
     ):
-        self.user_repository = user_repository
-        self.shooting_repository = shooting_repository
+        self.uow = uow
 
     # 确认用户存在，创建训练并交给 Repository 保存
     def start_session(
@@ -26,19 +23,21 @@ class ShootingService:
             note:Optional[str] = None
         ) -> ShootingSession:
 
-        user = self.user_repository.get_user_by_id(user_id)
+        with self.uow:
+            user = self.uow.user_repository.get_user_by_id(user_id)
 
-        if user is None:
-            raise ValueError("用户不存在")
+            if user is None:
+                raise ValueError("用户不存在")
 
-        training = ShootingSession(
-            id=uuid4(),
-            user_id=user_id,
-            started_at=datetime.now(),
-            note=note
-        )
+            training = ShootingSession(
+                id=uuid4(),
+                user_id=user_id,
+                started_at=datetime.now(),
+                note=note
+            )
 
-        self.shooting_repository.save_session(training)
+            self.uow.shooting_repository.save_session(training)
+            self.uow.commit()
 
         return training
 
@@ -50,14 +49,16 @@ class ShootingService:
             made:bool 
     ) -> ShotAttempt:
 
-        training = self.shooting_repository.get_session_by_id(session_id)
+        with self.uow:
+            training = self.uow.shooting_repository.get_session_by_id(session_id)
 
-        if training is None:
-            raise ValueError("训练不存在")
+            if training is None:
+                raise ValueError("训练不存在")
 
-        shot = training.add_shot(zone, made)
+            shot = training.add_shot(zone, made)
 
-        self.shooting_repository.add_shot(shot)
+            self.uow.shooting_repository.add_shot(shot)
+            self.uow.commit()
 
         return shot
 
@@ -67,34 +68,39 @@ class ShootingService:
             session_id:UUID
     ) -> ShootingSession:
 
-        training = self.shooting_repository.get_session_by_id(session_id)
+        with self.uow:
+            training = self.uow.shooting_repository.get_session_by_id(session_id)
 
-        if training is None:
-            raise ValueError("训练不存在")
+            if training is None:
+                raise ValueError("训练不存在")
 
-        training.finish()
+            training.finish()
 
-        self.shooting_repository.save_session(training)
+            self.uow.shooting_repository.save_session(training)
+            self.uow.commit()
 
         return training
 
     # 取得包含投篮记录的训练，不存在时抛出异常
     def get_session(self,session_id:UUID) -> ShootingSession:
-        training = self.shooting_repository.get_session_by_id(session_id)
+        with self.uow:
+            training = self.uow.shooting_repository.get_session_by_id(session_id)
 
-        if training is None:
-            raise ValueError("该训练不存在")
+            if training is None:
+                raise ValueError("该训练不存在")
 
         return training
 
     # 确认用户存在，再查询其全部训练；没有训练时返回空列表
     def list_sessions(self, user_id:UUID) -> list[ShootingSession]:
-        user = self.user_repository.get_user_by_id(user_id)
+        with self.uow:
+            user = self.uow.user_repository.get_user_by_id(user_id)
 
-        if user is None:
-            raise ValueError("用户不存在")
+            if user is None:
+                raise ValueError("用户不存在")
 
-        return self.shooting_repository.list_by_user_id(user_id)
+            trainings = self.uow.shooting_repository.list_by_user_id(user_id)
+        return trainings
 
     # 取得单次训练的投篮，计算总体及各区域统计
     def get_session_summary(self, session_id: UUID) -> dict:
