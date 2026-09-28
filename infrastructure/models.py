@@ -1,6 +1,7 @@
+# 定义用户、训练和投篮记录的数据库表。
 from uuid import UUID
 
-from sqlalchemy import String, Uuid, DateTime, Float, ForeignKey, Boolean
+from sqlalchemy import String, Uuid, DateTime, Float, ForeignKey, Boolean, BigInteger
 from sqlalchemy.orm import Mapped, mapped_column
 
 from datetime import datetime
@@ -97,3 +98,11 @@ class ShotAttemptModel(Base):
         nullable= False
     )
 
+class AuthSession(Base):
+    __tablename__ = "auth_session"
+
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=False
+    )
+    expires_at: Mapped[int] = mapped_column(BigInteger, nullable=False)

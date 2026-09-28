@@ -1,3 +1,4 @@
+# 定义投篮区域、投篮记录和训练实体。
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum

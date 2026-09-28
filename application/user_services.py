@@ -1,3 +1,4 @@
+# 处理用户注册和查询的业务流程。
 from uuid import UUID, uuid4
 from datetime import datetime
 
@@ -5,6 +6,9 @@ from application.ports import PasswordHasher
 
 from domain.users.entities import User
 from application.unit_of_work import UnitOfWork
+import hashlib
+import secrets
+import time
 
 
 # 组织用户注册和查询流程，当前由外部管理事务
@@ -29,6 +33,10 @@ class UserService:
                 raise ValueError("该用户已存在")
 
             # 只把哈希结果存入实体，不保存原始密码
+
+            if len(password) < 8:
+                raise ValueError("密码最低长度为8")
+
             password_hash = self.password_hasher.hash(password)
             
             user = User(
@@ -63,3 +71,36 @@ class UserService:
                 raise ValueError("用户不存在")
 
         return user
+
+    def authenticate(self, username: str, password: str) -> User:
+        with self.uow:
+            user = self.uow.user_repository.get_user_by_username(username)
+
+            if user is None or not self.password_hasher.verify(user.password_hash, password):
+                raise ValueError("用户名或密码错误")
+
+
+        return user
+
+    def login(self, username: str, password: str):
+        with self.uow:
+            user = self.uow.user_repository.get_user_by_username(username)
+            if user is None or not self.password_hasher.verify(
+                user.password_hash, password
+            ):
+                raise ValueError("用户名或密码错误")
+
+            token = secrets.token_urlsafe(32)
+            digest = hashlib.sha3_256(token.encode("utf-8")).hexdigest()
+
+            self.uow.auth_session_repository.save(
+                token_hash=digest,
+                user_id=user.id,
+                expires_at=int(time.time())+7*24*60*60
+            )
+
+            self.uow.commit()
+
+        return user, token
+
+    

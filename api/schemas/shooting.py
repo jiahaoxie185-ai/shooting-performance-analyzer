@@ -1,3 +1,4 @@
+# 定义训练接口的请求、响应和统计数据格式。
 from typing import Optional
 from uuid import UUID
 from datetime import datetime

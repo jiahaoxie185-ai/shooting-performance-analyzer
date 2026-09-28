@@ -1,3 +1,4 @@
+# 计算投篮命中率和分区统计。
 from .entities import ShotAttempt, ShootingZone
 
 # 计算总命中率，返回 0～1 的比例

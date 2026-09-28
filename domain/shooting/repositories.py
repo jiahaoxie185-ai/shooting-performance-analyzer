@@ -1,3 +1,4 @@
+# 定义训练和投篮记录的存取接口。
 from abc import ABC, abstractmethod
 from typing import Optional
 from uuid import UUID

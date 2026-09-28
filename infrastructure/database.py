@@ -1,3 +1,4 @@
+# 配置 SQLite 数据库、会话和模型基类。
 from pathlib import Path
 
 from sqlalchemy import create_engine, event

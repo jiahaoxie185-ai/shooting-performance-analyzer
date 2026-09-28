@@ -1,3 +1,4 @@
+# 测试投篮统计规则。
 import unittest
 
 from domain.shooting.rules import calculate_field_goals_percentage,calculate_zone_field_goals_percentage, calculate_shooting_summary, calculate_zone_statistics

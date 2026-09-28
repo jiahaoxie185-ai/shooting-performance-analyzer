@@ -1,3 +1,4 @@
+# 定义用户数据的存取接口。
 from abc import ABC, abstractmethod
 from typing import Optional
 from uuid import UUID
@@ -20,5 +21,8 @@ class UserRepository(ABC):
     def get_user_by_username(self, username: str) -> Optional[User]:
         pass 
 
-
+class AuthSessionRepository(ABC):
+    @abstractmethod
+    def save(self, token_hash: str, user_id: UUID, expries_at: int) -> None:
+        pass
     

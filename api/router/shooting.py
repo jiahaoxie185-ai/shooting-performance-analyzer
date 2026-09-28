@@ -1,3 +1,4 @@
+# 将训练、投篮和统计请求交给训练服务处理。
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from api.dependencies import get_shooting_service
@@ -11,6 +12,7 @@ from uuid import UUID
 router = APIRouter(prefix="/sessions", tags=["shooting"])
 
 
+# 创建训练；用户不存在时返回 404。
 @router.post(
     "",
     response_model= ShootingSessionResponse,
@@ -31,6 +33,7 @@ def start_shooting_session(
             detail=str(exc)
         ) from exc
 
+# 记录一球；训练状态不允许时返回 400。
 @router.post(
     "/{session_id}/shots",
     response_model= ShootingAttemptResponse,
@@ -53,6 +56,7 @@ def add_shot(
             detail=str(exc)
         ) from exc
 
+# 结束指定训练；找不到训练时返回 404。
 @router.post(
     "/{session_id}/finish",
     response_model=ShootingSessionResponse,
@@ -72,6 +76,7 @@ def finish_session(
             detail=str(exc)
         ) from exc
 
+# 查询一场训练的总体和分区统计。
 @router.get(
     "/{session_id}/summary",
     response_model=ShootingSummaryResponse,
@@ -89,6 +94,7 @@ def get_session_summary(
             detail=str(exc)
         ) from exc
 
+# 查询用户全部训练的累计统计。
 @router.get(
     "/users/{user_id}/summary",
     response_model=ShootingSummaryResponse,
@@ -106,4 +112,20 @@ def get_user_summary(
             detail=str(exc)
         ) from exc
 
-
+#查询用户所有训练场次
+@router.get(
+    "/users/{user_id}",
+    response_model=list[ShootingSessionResponse],
+    status_code=status.HTTP_200_OK
+)
+def list_user_sessions(
+    user_id:UUID,
+    service:ShootingService = Depends(get_shooting_service)
+):
+    try:
+        return service.list_sessions(user_id=user_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc)
+        ) from exc

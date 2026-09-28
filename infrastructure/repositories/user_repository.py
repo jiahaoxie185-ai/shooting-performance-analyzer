@@ -1,3 +1,4 @@
+# 实现用户对象与数据库记录的转换。
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 

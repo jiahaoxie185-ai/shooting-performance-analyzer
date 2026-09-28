@@ -1,3 +1,4 @@
+# 测试训练仓储的保存与读取。
 import unittest
 from datetime import datetime
 from uuid import uuid4

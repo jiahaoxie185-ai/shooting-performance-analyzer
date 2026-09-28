@@ -1,7 +1,8 @@
+# 定义业务层使用的事务接口。
 from abc import ABC, abstractmethod
 
 
-from domain.users.repositories import UserRepository
+from domain.users.repositories import UserRepository, AuthSessionRepository
 from domain.shooting.repositories import ShootingRepository
 
 
@@ -10,6 +11,7 @@ class UnitOfWork(ABC):
     # 仅声明属性；实现类负责创建共用同一事务的两个 Repository
     user_repository: UserRepository
     shooting_repository: ShootingRepository
+    auth_session_repository: AuthSessionRepository
 
     @abstractmethod
     # 进入 with 时准备会话和 Repository，并返回工作单元

@@ -1,3 +1,4 @@
+# 定义与数据库实现无关的用户数据。
 from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID

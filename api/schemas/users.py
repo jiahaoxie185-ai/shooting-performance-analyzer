@@ -1,3 +1,4 @@
+# 定义用户接口的请求和响应数据格式。
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
@@ -25,4 +26,9 @@ class UserResponse(BaseModel):
     position: Optional[str] = None
 
 
+class LoginRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=50)
+    password: str = Field(min_length=8)
+    
+     
     

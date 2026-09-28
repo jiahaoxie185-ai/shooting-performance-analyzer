@@ -1,3 +1,4 @@
+# 实现训练和投篮记录的数据库存取。
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
