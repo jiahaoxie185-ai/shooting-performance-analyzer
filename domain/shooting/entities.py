@@ -40,7 +40,7 @@ class ShootingSession:
     def add_shot(self,zone: ShootingZone, made: bool) -> ShotAttempt:
         # 已结束的训练不允许继续添加投篮
         if self.ended_at is not None:
-            raise ValueError("Training is over, cant add a shot")
+            raise ValueError("Training is over, can't add a shot")
         shot = ShotAttempt(
             id = uuid4(),
             session_id=self.id,

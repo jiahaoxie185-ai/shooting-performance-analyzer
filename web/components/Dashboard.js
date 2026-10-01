@@ -1,3 +1,4 @@
+// 训练工作台：登录后显示的各个功能区块，目前只有标题。
 export default function Dashboard(){
   return(
     <div>

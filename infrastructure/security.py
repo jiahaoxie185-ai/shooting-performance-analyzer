@@ -1,4 +1,4 @@
-# 使用 Argon2 生成密码哈希。
+# 使用 Argon2 生成和校验密码哈希。
 from argon2 import PasswordHasher as Argon2PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
 
@@ -13,6 +13,7 @@ class Argon2PasswordService:
     def hash(self, password: str) -> str:
         return self.hasher.hash(password)
 
+    # 校验密码；密码错误或哈希格式无效时都返回 False，不向外抛出异常
     def verify(self, password_hash: str, password: str) -> bool:
         try:
             return self.hasher.verify(password_hash, password)

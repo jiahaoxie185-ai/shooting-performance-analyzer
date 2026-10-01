@@ -13,7 +13,7 @@ from infrastructure.repositories.user_repository import SqlAlchemyUserRepository
 
 
 # 验证用户保存、读取和查不到用户时的返回值
-class TestUserRepositoy(unittest.TestCase):
+class TestUserRepository(unittest.TestCase):
     # 每个测试使用独立的内存数据库，避免影响正式数据库和其他测试
     def setUp(self):
         self.engine = create_engine("sqlite:///:memory:")

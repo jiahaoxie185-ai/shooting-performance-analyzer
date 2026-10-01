@@ -1,4 +1,4 @@
-# 定义业务层需要的密码哈希能力。
+# 定义业务层需要的密码哈希和校验能力。
 from typing import Protocol
 
 
@@ -8,5 +8,6 @@ class PasswordHasher(Protocol):
     def hash(self, password: str) -> str:
         pass
 
+    # 校验原始密码是否与已保存的哈希匹配，不匹配时返回 False
     def verify(self, password_hash: str, password: str) -> bool:
         pass

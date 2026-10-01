@@ -1,4 +1,4 @@
-# 处理用户注册和查询的业务流程。
+# 处理用户注册、查询和登录会话的业务流程。
 from uuid import UUID, uuid4
 from datetime import datetime
 
@@ -11,9 +11,9 @@ import secrets
 import time
 
 
-# 组织用户注册和查询流程，当前由外部管理事务
+# 组织用户注册、查询和登录流程，事务由工作单元管理
 class UserService:
-    # 保存传入的用户 Repository 和密码哈希组件
+    # 保存传入的工作单元和密码哈希组件
     def __init__(self, uow: UnitOfWork, password_hasher: PasswordHasher):
         self.uow = uow
         self.password_hasher = password_hasher
@@ -72,6 +72,7 @@ class UserService:
 
         return user
 
+    # 校验用户名和密码，成功时返回用户，失败时抛出业务异常
     def authenticate(self, username: str, password: str) -> User:
         with self.uow:
             user = self.uow.user_repository.get_user_by_username(username)
@@ -82,6 +83,7 @@ class UserService:
 
         return user
 
+    # 校验密码后生成随机令牌，只把令牌摘要存入数据库，返回用户和原始令牌
     def login(self, username: str, password: str):
         with self.uow:
             user = self.uow.user_repository.get_user_by_username(username)
@@ -103,4 +105,27 @@ class UserService:
 
         return user, token
 
-    
+    # 用与登录相同的算法计算令牌摘要，查询未过期会话对应的用户
+    def current_user(self, token: str) -> User:
+        digest = hashlib.sha3_256(token.encode("utf-8")).hexdigest()
+        with self.uow:
+            user_id = self.uow.auth_session_repository.get_user_id(
+                digest, int(time.time())
+            )
+            if user_id is None:
+                raise ValueError("登录已失效")
+            
+            user = self.uow.user_repository.get_user_by_id(user_id)
+            if user is None:
+                raise ValueError("登录已失效")
+
+        return user
+
+    # 计算令牌摘要并删除对应会话，使该令牌失效
+    def logout(self, token: str) -> None:
+        digest = hashlib.sha3_256(token.encode("utf-8")).hexdigest()
+        with self.uow:
+            self.uow.auth_session_repository.delete(digest)
+            self.uow.commit()
+
+            

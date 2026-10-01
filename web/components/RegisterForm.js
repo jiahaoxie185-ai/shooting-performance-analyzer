@@ -1,4 +1,5 @@
-export default function RegisterFrom({ onBack }) {
+// 注册表单：填写用户名、姓名和密码；onBack 返回欢迎页。
+export default function RegisterForm({ onBack }) {
     return(
         <main>
             <h1>注册</h1>

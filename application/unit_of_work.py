@@ -8,7 +8,7 @@ from domain.shooting.repositories import ShootingRepository
 
 # 工作单元接口，具体会话和事务操作由基础设施层实现
 class UnitOfWork(ABC):
-    # 仅声明属性；实现类负责创建共用同一事务的两个 Repository
+    # 仅声明属性；实现类负责创建共用同一事务的三个 Repository
     user_repository: UserRepository
     shooting_repository: ShootingRepository
     auth_session_repository: AuthSessionRepository

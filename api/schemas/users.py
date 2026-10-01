@@ -26,6 +26,7 @@ class UserResponse(BaseModel):
     position: Optional[str] = None
 
 
+# 登录请求，只包含用户名和密码，密码长度规则与注册一致
 class LoginRequest(BaseModel):
     username: str = Field(min_length=1, max_length=50)
     password: str = Field(min_length=8)

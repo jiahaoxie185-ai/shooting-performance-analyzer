@@ -1,17 +1,17 @@
-# 用一个数据库会话管理两个仓储和事务。
+# 用一个数据库会话管理三个仓储和事务。
 from application.unit_of_work import UnitOfWork
 from infrastructure.database import SessionLocal
 from infrastructure.repositories.user_repository import SqlAlchemyUserRepository
 from infrastructure.repositories.shooting_repository import SqlAlchemyShootingRepository
 from infrastructure.repositories.auth_session_repository import SqlAlchemyAuthSessionRepository
 
-# 在同一事务内操作用户仓储和训练仓储。
+# 在同一事务内操作用户、训练和登录会话仓储。
 class SqlAlchemyUnitOfWork(UnitOfWork):
     # 允许测试传入独立的会话工厂。
     def __init__(self, session_factory=SessionLocal):
         self.session_factory = session_factory
 
-    # 进入 with 时创建会话，并让两个仓储共用它。
+    # 进入 with 时创建会话，并让三个仓储共用它。
     def __enter__(self) -> "SqlAlchemyUnitOfWork":
         self.db = self.session_factory()
 

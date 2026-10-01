@@ -6,6 +6,7 @@ from application.user_services import UserService
 from uuid import UUID
 
 
+
 router = APIRouter(prefix="/users", tags=["users"])
 
 
@@ -59,5 +60,4 @@ def get_user_by_id(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc)
         ) from exc
-
 

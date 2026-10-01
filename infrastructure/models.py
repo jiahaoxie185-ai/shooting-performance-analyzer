@@ -1,4 +1,4 @@
-# 定义用户、训练和投篮记录的数据库表。
+# 定义用户、训练、投篮记录和登录会话的数据库表。
 from uuid import UUID
 
 from sqlalchemy import String, Uuid, DateTime, Float, ForeignKey, Boolean, BigInteger
@@ -98,6 +98,7 @@ class ShotAttemptModel(Base):
         nullable= False
     )
 
+# 登录会话表，主键是令牌摘要；过期时间保存为 Unix 时间戳（秒）
 class AuthSession(Base):
     __tablename__ = "auth_session"
 

@@ -112,7 +112,7 @@ def get_user_summary(
             detail=str(exc)
         ) from exc
 
-#查询用户所有训练场次
+# 查询用户全部训练场次；用户不存在时返回 404。
 @router.get(
     "/users/{user_id}",
     response_model=list[ShootingSessionResponse],

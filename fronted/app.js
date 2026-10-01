@@ -53,7 +53,7 @@ console.log(`field goals: ${madeShots.length} / ${shots.length}`);
 
 // 用命中数和总次数计算百分比。
 const fieldGoals = (madeShots.length / shots.length) * 100;
-console.log(`field goals in persentage: ${fieldGoals.toFixed(1)}%`)
+console.log(`field goals in percentage: ${fieldGoals.toFixed(1)}%`)
 
 // 空数组先返回零，避免计算零除以零。
 let noShots = [];
