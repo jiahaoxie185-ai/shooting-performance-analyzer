@@ -1,3 +1,45 @@
+# 投篮训练 Web
+
+已实现注册、登录、Cookie 会话恢复和退出。注册成功后进入登录页；登录后工作台显示真实用户信息，训练区暂为占位。
+
+## 本地启动
+
+在仓库根目录，使用已有 Python 环境初始化缺失表并启动后端：
+
+```bash
+.venv/bin/python -m infrastructure.init_db
+.venv/bin/python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
+```
+
+初始化会写入根目录 `basketball.db`，不会迁移已有表结构。仓库尚未声明后端依赖清单，上述命令依赖当前已有虚拟环境。
+
+另开终端启动前端：
+
+```bash
+cd web
+npm ci
+npm run dev
+```
+
+浏览器访问 `http://localhost:3000`。`web/next.config.mjs` 将 `/api` 代理到 `BACKEND_URL`（默认 `http://127.0.0.1:8000`），无需浏览器直接跨域请求。改变 `BACKEND_URL` 后重启或重新构建前端。
+
+Cookie 是 HttpOnly、SameSite=Lax、Path=/，有效期 7 天；令牌不保存在 localStorage。生产 HTTPS 为后端设置 `COOKIE_SECURE=true`，并配置前端构建时的 `BACKEND_URL`；生产部署尚未验证。
+
+## 验证
+
+在仓库根目录：
+
+```bash
+.venv/bin/python -B -m unittest validation.auth_flow -v
+node --test validation/api.test.mjs
+```
+
+认证验证使用临时 SQLite，不写入真实数据库，不使用现有 `test/`。在 `web/` 执行 `npm run lint`、`npm run build`；构建成功后可执行 `npm run start`。
+
+---
+
+以下为 Next.js 原始框架说明。
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
