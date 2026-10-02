@@ -2,9 +2,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from api.dependencies import get_shooting_service
-from api.schemas.shooting import ShootingSessionCreate, ShootingSessionResponse, ShotAttemptCreate, ShootingAttemptResponse,ShootingSummaryResponse
+from api.schemas.shooting import ShootingSessionCreate, ShootingSessionResponse, ShotAttemptCreate, ShotBatchCreate, ShootingAttemptResponse,ShootingSummaryResponse
 
-from application.shooting_services import ShootingService
+from application.shooting_services import ShootingService, ShootingSessionNotFoundError
 
 from uuid import UUID
 
@@ -55,6 +55,46 @@ def add_shot(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc)
         ) from exc
+
+# 批量添加投篮；整批由服务统一提交。
+@router.post(
+    "/{session_id}/shots/batch",
+    response_model=ShootingSessionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def add_shots(
+    session_id: UUID,
+    request: ShotBatchCreate,
+    service: ShootingService = Depends(get_shooting_service),
+):
+    try:
+        return service.add_shots(
+            session_id=session_id,
+            attempts=request.attempts,
+            made=request.made,
+            zone=request.zone,
+        )
+    except ShootingSessionNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+# 查询单场详情，复用包含投篮列表的训练响应。
+@router.get(
+    "/{session_id}",
+    response_model=ShootingSessionResponse,
+    status_code=status.HTTP_200_OK,
+)
+def get_session(
+    session_id: UUID,
+    service: ShootingService = Depends(get_shooting_service),
+):
+    try:
+        return service.get_session(session_id=session_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
 
 # 结束指定训练；找不到训练时返回 404。
 @router.post(

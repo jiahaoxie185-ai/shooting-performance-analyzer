@@ -8,6 +8,10 @@ from application.unit_of_work import UnitOfWork
 from domain.shooting.rules import calculate_shooting_summary, calculate_zone_statistics
 
 
+class ShootingSessionNotFoundError(ValueError):
+    """指定的训练不存在。"""
+
+
 # 组织训练业务，复用领域规则；当前由外部管理事务
 class ShootingService:
     # 保存外部传入的 Repository，实现类在组装时确定
@@ -62,6 +66,32 @@ class ShootingService:
             self.uow.commit()
 
         return shot
+
+    # 在同一个事务中追加整批投篮，失败时由工作单元回滚。
+    def add_shots(
+        self,
+        session_id: UUID,
+        attempts: int,
+        made: int,
+        zone: ShootingZone,
+    ) -> ShootingSession:
+        if type(attempts) is not int or type(made) is not int:
+            raise ValueError("出手数和命中数必须为整数")
+        if attempts <= 0 or made < 0 or made > attempts:
+            raise ValueError("出手数必须大于零，命中数必须在零和出手数之间")
+
+        with self.uow:
+            training = self.uow.shooting_repository.get_session_by_id(session_id)
+            if training is None:
+                raise ShootingSessionNotFoundError("训练不存在")
+
+            for index in range(attempts):
+                shot = training.add_shot(zone=zone, made=index < made)
+                self.uow.shooting_repository.add_shot(shot)
+
+            self.uow.commit()
+
+        return training
 
     # 由实体记录结束时间，再保存训练状态的变化
     def finish_session(

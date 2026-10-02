@@ -1,0 +1,39 @@
+.dashboard {
+  width: calc(100% - 32px);
+  max-width: 720px;
+  margin: 32px auto;
+  padding: 16px;
+  display: grid;
+  gap: 16px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.header p { margin-top: 8px; }
+.card {
+  margin-top: 0;
+  padding: 20px;
+  border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  border-radius: 12px;
+  gap: 16px;
+}
+.form { display: grid; gap: 10px; border: 0; }
+.form input, .form select { width: 100%; min-width: 0; padding: 10px; font: inherit; }
+.dashboard button { font: inherit; cursor: pointer; }
+.dashboard button:disabled { cursor: wait; opacity: 0.6; }
+.sessions { list-style: none; display: grid; gap: 10px; }
+.sessions button { display: grid; gap: 8px; width: 100%; text-align: left; padding: 14px; }
+.error { color: #d03939; }
+.percentage { font-size: 40px; font-weight: 700; }
+
+@media (max-width: 480px) {
+  .dashboard { padding: 0; margin: 20px auto; }
+  .card { padding: 16px; }
+  .header h1 { font-size: 26px; }
+}

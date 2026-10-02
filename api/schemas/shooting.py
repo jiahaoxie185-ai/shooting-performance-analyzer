@@ -3,7 +3,7 @@ from typing import Optional
 from uuid import UUID
 from datetime import datetime
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 from domain.shooting.entities import ShootingZone
 
@@ -17,6 +17,19 @@ class ShootingSessionCreate(BaseModel):
 class ShotAttemptCreate(BaseModel):
     zone: ShootingZone
     made: bool
+
+
+# 批量录入的数量必须是整数，并且命中数不能超过出手数。
+class ShotBatchCreate(BaseModel):
+    attempts: int = Field(strict=True, gt=0)
+    made: int = Field(strict=True, ge=0)
+    zone: ShootingZone
+
+    @model_validator(mode="after")
+    def validate_counts(self) -> "ShotBatchCreate":
+        if self.made > self.attempts:
+            raise ValueError("命中数不能超过出手数")
+        return self
 
 
 # 单次投篮的响应格式，从领域对象读取属性
@@ -49,5 +62,4 @@ class ShootingStatistics(BaseModel):
 # 完整统计响应，在基础统计上增加各区域的统计字典
 class ShootingSummaryResponse(ShootingStatistics):
     zones: dict[str, ShootingStatistics]
-
 
