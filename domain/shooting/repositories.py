@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 from uuid import UUID
 
-from .entities import ShootingSession, ShotAttempt
+from .entities import ShootingSession, ShotAttempt, ShotGroup
 
 # 训练数据的存取接口，不在这里编写数据库操作
 class ShootingRepository(ABC):
@@ -15,6 +15,26 @@ class ShootingRepository(ABC):
     @abstractmethod
     # 单独新增一条投篮记录，训练必须已经存在于数据库事务中
     def add_shot(self, shot: ShotAttempt) ->None:
+        pass
+
+    # 新增投篮组，逐球记录嵌入组内保存
+    @abstractmethod
+    def add_shot_group(self, group: ShotGroup) -> None:
+        pass
+
+    # 查询组及其嵌入保存的逐球记录
+    @abstractmethod
+    def get_shot_group_by_id(self, group_id: UUID) -> Optional[ShotGroup]:
+        pass
+
+    # 返回指定训练中的所有投篮组
+    @abstractmethod
+    def list_shot_groups(self, session_id: UUID) -> list[ShotGroup]:
+        pass
+
+    # 首次结束保存组内完整记录，已结束组不允许覆盖
+    @abstractmethod
+    def finish_shot_group(self, group: ShotGroup) -> None:
         pass
 
     # 根据训练 ID 返回训练及投篮记录；找不到时返回 None

@@ -2,9 +2,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from api.dependencies import get_shooting_service
-from api.schemas.shooting import ShootingSessionCreate, ShootingSessionResponse, ShotAttemptCreate, ShotBatchCreate, ShootingAttemptResponse,ShootingSummaryResponse
+from api.schemas.shooting import ShootingSessionCreate, ShootingSessionResponse, ShotAttemptCreate, ShootingAttemptResponse,ShootingSummaryResponse
+from api.schemas.shooting import ShotGroupCreate, ShotGroupFinish, ShotGroupResponse, ShootingStatistics
 
-from application.shooting_services import ShootingService, ShootingSessionNotFoundError
+from application.shooting_services import ShootingService, ShootingSessionNotFoundError, ShotGroupNotFoundError
 
 from uuid import UUID
 
@@ -33,6 +34,86 @@ def start_shooting_session(
             detail=str(exc)
         ) from exc
 
+# 在指定训练中创建投篮组；已结束训练不能创建组。
+@router.post(
+    "/{session_id}/shot-groups",
+    response_model=ShotGroupResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def add_shot_group(
+    session_id: UUID,
+    request: ShotGroupCreate = ShotGroupCreate(),
+    service: ShootingService = Depends(get_shooting_service),
+):
+    try:
+        return service.add_shot_group(session_id=session_id, zone=request.zone)
+    except ShootingSessionNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+# 查询本场训练的所有投篮组。
+@router.get("/{session_id}/shot-groups", response_model=list[ShotGroupResponse])
+def list_shot_groups(
+    session_id: UUID,
+    service: ShootingService = Depends(get_shooting_service),
+):
+    try:
+        return service.list_shot_groups(session_id)
+    except ShootingSessionNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+# 查询指定投篮组，包含状态、点位及逐球记录。
+@router.get(
+    "/shot-groups/{group_id}",
+    response_model=ShotGroupResponse,
+    status_code=status.HTTP_200_OK,
+)
+def get_shot_group_by_id(
+    group_id: UUID,
+    service: ShootingService = Depends(get_shooting_service),
+):
+    try:
+        return service.get_shot_group_by_id(group_id=group_id)
+    except ShotGroupNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+# 查询本组统计，前端不根据逐球记录重新计算。
+@router.get("/shot-groups/{group_id}/summary", response_model=ShootingStatistics)
+def get_shot_group_summary(
+    group_id: UUID,
+    service: ShootingService = Depends(get_shooting_service),
+):
+    try:
+        return service.get_shot_group_summary(group_id)
+    except ShotGroupNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+# 提交点位和数量并结束，相同数据重试不重复生成投篮。
+@router.post(
+    "/shot-groups/{group_id}/finish",
+    response_model=ShotGroupResponse,
+    status_code=status.HTTP_200_OK,
+)
+def finish_shot_group(
+    group_id: UUID,
+    request: ShotGroupFinish,
+    service: ShootingService = Depends(get_shooting_service),
+):
+    try:
+        return service.finish_shot_group(
+            group_id=group_id, zone=request.zone, attempts=request.attempts, made=request.made
+        )
+    except ShotGroupNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
 # 记录一球；训练状态不允许时返回 400。
 @router.post(
     "/{session_id}/shots",
@@ -55,30 +136,6 @@ def add_shot(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc)
         ) from exc
-
-# 批量添加投篮；整批由服务统一提交。
-@router.post(
-    "/{session_id}/shots/batch",
-    response_model=ShootingSessionResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-def add_shots(
-    session_id: UUID,
-    request: ShotBatchCreate,
-    service: ShootingService = Depends(get_shooting_service),
-):
-    try:
-        return service.add_shots(
-            session_id=session_id,
-            attempts=request.attempts,
-            made=request.made,
-            zone=request.zone,
-        )
-    except ShootingSessionNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-
 
 # 查询单场详情，复用包含投篮列表的训练响应。
 @router.get(

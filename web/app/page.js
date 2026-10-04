@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Welcome from "@/components/Welcome";
 import LoginForm from "@/components/LoginForm";
 import RegisterForm from "@/components/RegisterForm";
-import Dashboard from "@/components/Dashboard";
+import Dashboard from "@/components/dashboard/Dashboard";
 import { getCurrentUser } from "@/lib/api";
 
 export default function Home() {
@@ -62,7 +62,9 @@ export default function Home() {
   }
   if (screen === "dashboard" && currentUser) {
     return <Dashboard user={currentUser} onLogout={() => {
+      // 后端退出成功后，清空用户并展示欢迎页。
       setCurrentUser(null);
+      setRegisteredUsername("");
       setScreen("welcome");
     }} />;
   }

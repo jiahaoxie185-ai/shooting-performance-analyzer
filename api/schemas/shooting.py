@@ -19,14 +19,20 @@ class ShotAttemptCreate(BaseModel):
     made: bool
 
 
-# 批量录入的数量必须是整数，并且命中数不能超过出手数。
-class ShotBatchCreate(BaseModel):
+# 创建空投篮组，所属训练 ID 由请求路径提供
+class ShotGroupCreate(BaseModel):
+    # 创建时可以不选点位
+    zone: Optional[ShootingZone] = None
+
+
+# 结束本组时一次提交点位、出手数和命中数
+class ShotGroupFinish(BaseModel):
+    zone: ShootingZone
     attempts: int = Field(strict=True, gt=0)
     made: int = Field(strict=True, ge=0)
-    zone: ShootingZone
 
     @model_validator(mode="after")
-    def validate_counts(self) -> "ShotBatchCreate":
+    def validate_counts(self) -> "ShotGroupFinish":
         if self.made > self.attempts:
             raise ValueError("命中数不能超过出手数")
         return self
@@ -41,6 +47,18 @@ class ShootingAttemptResponse(BaseModel):
     zone: ShootingZone
     made: bool
     attempted_at: datetime
+
+# 投篮组的响应格式，包含该组逐球记录
+class ShotGroupResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    session_id: UUID
+    zone: Optional[ShootingZone] = None
+    started_at: datetime
+    ended_at: Optional[datetime] = None
+    shots: list[ShootingAttemptResponse] = Field(default_factory=list)
+
 
 # 训练详情的响应格式，包含嵌套的投篮列表
 class ShootingSessionResponse(BaseModel):
@@ -62,4 +80,3 @@ class ShootingStatistics(BaseModel):
 # 完整统计响应，在基础统计上增加各区域的统计字典
 class ShootingSummaryResponse(ShootingStatistics):
     zones: dict[str, ShootingStatistics]
-

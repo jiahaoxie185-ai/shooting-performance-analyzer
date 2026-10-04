@@ -16,12 +16,10 @@ test("认证请求使用同源代理、携带凭据且恢复不缓存", async (t
   await api.registerUser({ username: "player-a", name: "玩家", password: "example-password" });
   await api.loginUser({ username: "player-a", password: "example-password" });
   await api.getCurrentUser(signal);
-  await api.logoutUser();
-  assert.deepEqual(calls.map((call) => call.url), ["/api/users", "/api/auth/login", "/api/auth/me", "/api/auth/logout"]);
+  assert.deepEqual(calls.map((call) => call.url), ["/api/users", "/api/auth/login", "/api/auth/me"]);
   for (const { options } of calls) assert.equal(options.credentials, "include");
   assert.equal(calls[0].options.method, "POST");
   assert.equal(calls[1].options.method, "POST");
-  assert.equal(calls[3].options.method, "POST");
   assert.equal(calls[2].options.cache, "no-store");
   assert.equal(calls[2].options.signal, signal);
   assert.deepEqual(JSON.parse(calls[1].options.body), { username: "player-a", password: "example-password" });

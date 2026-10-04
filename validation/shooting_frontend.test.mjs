@@ -2,46 +2,64 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 
+// 以 ESM 加载现有模块，不修改前端的模块配置。
 async function loadModule(path) {
   const source = await readFile(new URL(path, import.meta.url), "utf8");
   return import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`);
 }
 
-const { summarizeToday, summarizeShots } = await loadModule("../web/lib/shooting.js");
 const api = await loadModule("../web/lib/api.js");
 
-test("今日统计按投篮日期筛选并合并数量，不平均各场命中率", () => {
-  const now = new Date(2026, 9, 2, 12);
-  const shot = (made, date = "2026-10-02T10:00:00") => ({ made, attempted_at: date });
-  const sessions = [
-    { shots: [shot(true)] },
-    { shots: [shot(false), shot(false), shot(false), shot(true, "2026-10-01T23:59:59")] },
-    { shots: [shot(true, "2026-10-03T00:00:00")] },
-    { shots: [] },
-  ];
-  assert.deepEqual(summarizeToday(sessions, now), { attempts: 4, made: 1, percentage: 25 });
-  assert.deepEqual(summarizeToday([], now), { attempts: 0, made: 0, percentage: 0 });
-  assert.equal(summarizeShots(Array.from({ length: 20 }, (_, i) => shot(i < 14))).percentage, 70);
-});
-
-test("训练请求连接正确接口，批量数量作为数字传输", async (t) => {
+test("投篮组创建、查询和结束请求使用正确接口", async (t) => {
   const calls = [];
   t.mock.method(globalThis, "fetch", async (url, options) => {
     calls.push({ url, options });
-    return Response.json({ id: "session-a", shots: [] });
+    return Response.json({ id: "group-a", shots: [] });
   });
   await api.createShootingSession("user-a");
-  await api.getShootingSessions("user-a");
-  await api.getShootingSession("session-a");
-  await api.addShootingBatch("session-a", { attempts: 20, made: 14, zone: "top_three" });
-  await api.finishShootingSession("session-a");
+  await api.createShotGroup("session-a");
+  const signal = new AbortController().signal;
+  await api.getShotGroup("group-a", signal);
+  await api.finishShotGroup("group-a", { zone: "top_three", attempts: 20, made: 14 });
+  await api.getShotGroupSummary("group-a", signal);
   assert.deepEqual(calls.map(({ url }) => url), [
-    "/api/sessions", "/api/sessions/users/user-a", "/api/sessions/session-a",
-    "/api/sessions/session-a/shots/batch", "/api/sessions/session-a/finish",
+    "/api/sessions", "/api/sessions/session-a/shot-groups",
+    "/api/sessions/shot-groups/group-a", "/api/sessions/shot-groups/group-a/finish",
+    "/api/sessions/shot-groups/group-a/summary",
   ]);
-  assert.deepEqual(JSON.parse(calls[3].options.body), { attempts: 20, made: 14, zone: "top_three" });
-  assert.deepEqual(calls.map(({ options }) => options.method || "GET"), ["POST", "GET", "GET", "POST", "POST"]);
+  assert.deepEqual(JSON.parse(calls[1].options.body), {});
+  assert.deepEqual(JSON.parse(calls[3].options.body), { zone: "top_three", attempts: 20, made: 14 });
   assert.ok(calls.every(({ options }) => options.credentials === "include"));
-  assert.equal(calls[1].options.cache, "no-store");
   assert.equal(calls[2].options.cache, "no-store");
+  assert.equal(calls[2].options.signal, signal);
+  assert.equal(calls[4].options.cache, "no-store");
+  assert.equal(calls[4].options.signal, signal);
+});
+
+test("训练与组列表读取不缓存且支持取消", async (t) => {
+  const calls = [];
+  const signal = new AbortController().signal;
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    calls.push({ url, options });
+    return Response.json([]);
+  });
+  await api.getShootingSessions("user-a", signal);
+  await api.getShotGroups("session-a", signal);
+  assert.deepEqual(calls.map(({ url }) => url), [
+    "/api/sessions/users/user-a", "/api/sessions/session-a/shot-groups",
+  ]);
+  assert.ok(calls.every(({ options }) => options.cache === "no-store" && options.signal === signal));
+});
+
+// 统计结果保持后端口径，前端请求模块不重算或改写数值。
+test("本组统计保留后端结果，失败后可以单独重新查询", async (t) => {
+  const summary = { attempts: 20, made: 14, field_goals: 0.7, zones: {} };
+  let failed = true;
+  t.mock.method(globalThis, "fetch", async () => {
+    if (failed) return Response.json({ detail: "统计暂不可用" }, { status: 503 });
+    return Response.json(summary);
+  });
+  await assert.rejects(api.getShotGroupSummary("group-a"), { status: 503 });
+  failed = false;
+  assert.deepEqual(await api.getShotGroupSummary("group-a"), summary);
 });

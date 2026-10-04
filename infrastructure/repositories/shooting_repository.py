@@ -4,10 +4,11 @@ from sqlalchemy import select
 
 from typing import Optional
 from uuid import UUID
+from datetime import datetime
 
 from domain.shooting.repositories import ShootingRepository
-from domain.shooting.entities import ShootingSession, ShotAttempt, ShootingZone
-from infrastructure.models import ShootingSessionModel, ShotAttemptModel
+from domain.shooting.entities import ShootingSession, ShotAttempt, ShotGroup, ShootingZone
+from infrastructure.models import ShootingSessionModel, ShotAttemptModel, ShotGroupModel
 
 
 # 训练存取接口的 SQLAlchemy 实现；提交、回滚和关闭由外部负责
@@ -45,6 +46,89 @@ class SqlAlchemyShootingRepository(ShootingRepository):
             attempted_at=shot.attempted_at
         )
         self.db.add(model)
+
+    # 转换成 JSON 字段，不丢失逐球 ID 和时间
+    @staticmethod
+    def _serialize_group_shots(group: ShotGroup) -> list[dict]:
+        return [
+            {"id": str(shot.id), "session_id": str(shot.session_id),
+             "zone": shot.zone.value, "made": shot.made,
+             "attempted_at": shot.attempted_at.isoformat()}
+            for shot in group.shots
+        ]
+
+    @staticmethod
+    def _restore_group_shots(records: list[dict]) -> list[ShotAttempt]:
+        return [
+            ShotAttempt(id=UUID(record["id"]), session_id=UUID(record["session_id"]),
+                        zone=ShootingZone(record["zone"]), made=record["made"],
+                        attempted_at=datetime.fromisoformat(record["attempted_at"]))
+            for record in records
+        ]
+
+    # 新增组和组内记录，提交仍由服务负责
+    def add_shot_group(self, group: ShotGroup) -> None:
+        model = ShotGroupModel(
+            id=group.id,
+            session_id=group.session_id,
+            zone=group.zone.value if group.zone is not None else None,
+            started_at=group.started_at,
+            ended_at=group.ended_at,
+            shots=self._serialize_group_shots(group)
+        )
+        self.db.add(model)
+
+    # 读取组信息，交给领域实体判断结束状态
+    def get_shot_group_by_id(self, group_id: UUID) -> Optional[ShotGroup]:
+        model = self.db.get(ShotGroupModel, group_id)
+        if model is None:
+            return None
+        return ShotGroup(
+            id=model.id,
+            session_id=model.session_id,
+            zone=ShootingZone(model.zone) if model.zone is not None else None,
+            started_at=model.started_at,
+            ended_at=model.ended_at,
+            shots=self._restore_group_shots(model.shots)
+        )
+
+    # 按创建时间和 ID 排序，列表只包含本场训练的组
+    def list_shot_groups(self, session_id: UUID) -> list[ShotGroup]:
+        models = self.db.scalars(
+            select(ShotGroupModel)
+            .where(ShotGroupModel.session_id == session_id)
+            .order_by(ShotGroupModel.started_at, ShotGroupModel.id)
+        ).all()
+        return [
+            ShotGroup(id=model.id, session_id=model.session_id,
+                      zone=ShootingZone(model.zone) if model.zone is not None else None, started_at=model.started_at,
+                      ended_at=model.ended_at, shots=self._restore_group_shots(model.shots))
+            for model in models
+        ]
+
+    # 第一次结束保存完整逐球记录；已结束组不覆盖原数据
+    def finish_shot_group(self, group: ShotGroup) -> None:
+        model = self.db.get(ShotGroupModel, group.id)
+        if model is None:
+            raise ValueError("投篮组不存在")
+        if group.ended_at is None:
+            raise ValueError("投篮组尚未结束")
+        if group.zone is None:
+            raise ValueError("结束投篮组必须有点位")
+        if model.ended_at is None:
+            if (group.session_id != model.session_id
+                    or group.started_at != model.started_at):
+                raise ValueError("投篮组信息与已保存数据不一致")
+            if any(shot.session_id != group.session_id or shot.zone != group.zone for shot in group.shots):
+                raise ValueError("组内投篮必须属于本场训练和本组点位")
+            # 点位在结束时确定，与逐球记录一起保存。
+            model.zone = group.zone.value
+            model.shots = self._serialize_group_shots(group)
+            model.ended_at = group.ended_at
+        else:
+            group.zone = ShootingZone(model.zone)
+            group.ended_at = model.ended_at
+            group.shots = self._restore_group_shots(model.shots)
 
     # 读取训练及其全部投篮，组装成完整的领域训练对象
     def get_session_by_id(self, session_id: UUID) ->Optional[ShootingSession]:
@@ -111,4 +195,3 @@ class SqlAlchemyShootingRepository(ShootingRepository):
 
 
     
-

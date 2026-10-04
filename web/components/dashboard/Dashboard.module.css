@@ -1,3 +1,4 @@
+/* 限制工作台宽度并居中，避免影响登录等其他页面。 */
 .dashboard {
   width: calc(100% - 32px);
   max-width: 720px;
@@ -7,6 +8,7 @@
   gap: 16px;
 }
 
+/* 标题和按钮并排显示，空间不足时自动换行。 */
 .header {
   display: flex;
   justify-content: space-between;
@@ -23,6 +25,7 @@
   border-radius: 12px;
   gap: 16px;
 }
+/* 表单逐行排列，训练列表的整行按钮可以点击。 */
 .form { display: grid; gap: 10px; border: 0; }
 .form input, .form select { width: 100%; min-width: 0; padding: 10px; font: inherit; }
 .dashboard button { font: inherit; cursor: pointer; }
@@ -32,6 +35,7 @@
 .error { color: #d03939; }
 .percentage { font-size: 40px; font-weight: 700; }
 
+/* 手机宽度下缩小留白。 */
 @media (max-width: 480px) {
   .dashboard { padding: 0; margin: 20px auto; }
   .card { padding: 16px; }

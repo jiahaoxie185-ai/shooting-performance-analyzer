@@ -1,6 +1,6 @@
 # 初始化数据库中尚不存在的表。
 from .database import Base, engine
-# 导入模型以注册四张表，即使没有直接使用 models 变量也不能省略
+# 导入模型以注册数据库表，即使没有直接使用 models 变量也不能省略
 from. import models
 
 

@@ -1,7 +1,7 @@
-# 定义用户、训练、投篮记录和登录会话的数据库表。
+# 定义用户、训练、投篮组、投篮记录和登录会话的数据库表。
 from uuid import UUID
 
-from sqlalchemy import String, Uuid, DateTime, Float, ForeignKey, Boolean, BigInteger
+from sqlalchemy import String, Uuid, DateTime, Float, ForeignKey, Boolean, BigInteger, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
 from datetime import datetime
@@ -70,6 +70,21 @@ class ShootingSessionModel(Base):
         String(500),
         nullable= True
     )
+
+# 投篮组表模型，通过 session_id 关联所属训练
+class ShotGroupModel(Base):
+    __tablename__ = "shot_groups"
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, nullable=False)
+    session_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("shooting_sessions.id"), nullable=False
+    )
+    # 新建空组允许没有点位，结束时补齐
+    zone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    # 逐球记录嵌入组内保存，保留每球 ID 和时间
+    shots: Mapped[list[dict]] = mapped_column(JSON, nullable=False, default=list, server_default="[]")
 
 # 投篮表模型，通过 session_id 关联训练；区域保存为字符串
 class ShotAttemptModel(Base):
