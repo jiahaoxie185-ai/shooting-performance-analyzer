@@ -1,0 +1,5 @@
+fastapi
+pydantic
+sqlalchemy
+argon2-cffi
+uvicorn
